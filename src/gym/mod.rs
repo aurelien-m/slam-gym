@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
+mod ui;
 mod core;
 mod graphics;
 
@@ -11,6 +12,7 @@ impl Plugin for GymPlugin {
         app.add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
             .add_plugins(RapierDebugRenderPlugin::default())
             .add_plugins(core::GymCorePlugin)
-            .add_plugins(graphics::GymGraphicsPlugin);
+            .add_plugins(graphics::GymGraphicsPlugin)
+            .add_plugins(ui::UiPlugin);
     }
 }

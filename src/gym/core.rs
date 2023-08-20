@@ -11,6 +11,7 @@ use nalgebra::vector;
 pub struct Robot {
     pub position: Vec2,
     pub orientation: f32,
+    pub trajectory: Vec<Vec2>,
 }
 
 #[derive(Component)]
@@ -50,6 +51,7 @@ fn setup_robot(mut commands: Commands) {
     commands.spawn(Robot {
         position: Vec2::new(0.0, 0.0),
         orientation: 0.0,
+        trajectory: Vec::new(),
     });
 }
 
