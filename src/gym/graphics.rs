@@ -54,34 +54,36 @@ fn setup_world(
     }
 }
 
-fn create_triangle() -> Mesh {
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    mesh.insert_attribute(
-        Mesh::ATTRIBUTE_POSITION,
-        vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]],
-    );
-    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, vec![[0.0, 0.0, 0.0, 1.0]; 3]);
-    mesh.set_indices(Some(Indices::U32(vec![0, 1, 2])));
-    mesh
-}
-
 fn setup_graphics(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(create_triangle()).into(),
-        transform: Transform::default().with_scale(Vec3::splat(128.)),
-        material: materials.add(ColorMaterial::from(Color::PURPLE)),
-        ..Default::default()
-    });
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    mesh.insert_attribute(
+        Mesh::ATTRIBUTE_POSITION,
+        vec![
+            [0., 0., 0.],
+            [1., 0.5, 0.],
+            [0., 1., 0.],
+            [-1., 1., 0.],
+            [-1., -1., 0.],
+            [0., -1., 0.],
+            [1., -0.5, 0.],
+        ],
+    );
+    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, vec![[0., 0.761, 1., 1.]; 7]);
+    mesh.set_indices(Some(Indices::U32(vec![
+        0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5, 0, 5, 6, 0, 6, 1,
+    ])));
+
     commands.spawn((
         MaterialMesh2dBundle {
-            mesh: meshes.add(shape::Circle::new(10.).into()).into(),
+            mesh: meshes.add(mesh).into(),
             material: materials.add(ColorMaterial::from(Color::PURPLE)),
-            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-            ..default()
+            transform: Transform::from_translation(Vec3::new(0., 0., 0.))
+                .with_scale(Vec3::splat(16.)),
+            ..Default::default()
         },
         Robot,
     ));
@@ -92,4 +94,5 @@ fn draw_robot(robots: Query<&mut core::Robot>, mut transform: Query<&mut Transfo
     let transform = &mut transform.single_mut();
     transform.translation.x = robot.position.x;
     transform.translation.y = robot.position.y;
+    transform.rotation = Quat::from_rotation_z(robot.orientation);
 }

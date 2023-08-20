@@ -10,6 +10,7 @@ use nalgebra::vector;
 #[derive(Component)]
 pub struct Robot {
     pub position: Vec2,
+    pub orientation: f32,
 }
 
 #[derive(Component)]
@@ -48,6 +49,7 @@ fn setup_world(mut commands: Commands) {
 fn setup_robot(mut commands: Commands) {
     commands.spawn(Robot {
         position: Vec2::new(0.0, 0.0),
+        orientation: 0.0,
     });
 }
 
@@ -74,6 +76,7 @@ fn update_physics(robots: Query<&mut Robot>, mut rapier_handlers: Query<&mut Wor
 }
 
 fn update_robot(time: Res<Time>, mut robots: Query<&mut Robot>) {
-    // let mut robot = robots.single_mut();
+    let mut robot = robots.single_mut();
     // robot.position.y -= time.delta_seconds() * 10.0;
+    robot.orientation += time.delta_seconds() * 1.0;
 }
