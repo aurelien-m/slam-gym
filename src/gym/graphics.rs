@@ -86,7 +86,7 @@ fn setup_graphics(
         MaterialMesh2dBundle {
             mesh: meshes.add(mesh).into(),
             material: materials.add(ColorMaterial::from(LIGHT_ORANGE)),
-            transform: Transform::from_translation(Vec3::new(0., 0., 0.))
+            transform: Transform::from_translation(Vec3::new(0., 0., 1.))
                 .with_scale(Vec3::splat(16.)),
             ..Default::default()
         },
