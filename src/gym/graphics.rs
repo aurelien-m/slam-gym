@@ -11,18 +11,20 @@ pub struct GymGraphicsPlugin;
 const DARK_BLUE: Color = Color::rgb(0.15, 0.27, 0.33);
 const LIGHT_BLUE: Color = Color::rgb(0.16, 0.62, 0.56);
 const LIGHT_ORANGE: Color = Color::rgb(0.91, 0.77, 0.42);
-const _MEDIUM_ORANGE: Color = Color::rgb(0.96, 0.64, 0.38);
+const MEDIUM_ORANGE: Color = Color::rgb(0.96, 0.64, 0.38);
 const DARK_ORANGE: Color = Color::rgb(0.91, 0.44, 0.32);
 
 #[derive(Component)]
 struct Robot;
 
+#[derive(Component)]
+struct Sensor;
+
 impl Plugin for GymGraphicsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(DARK_BLUE))
-            .add_systems(Startup, setup_graphics)
-            .add_systems(PostStartup, setup_world)
-            .add_systems(Update, draw_robot);
+            .add_systems(PostStartup, (setup_world, setup_robot))
+            .add_systems(Update, (draw_robot, draw_sensors));
     }
 }
 
@@ -33,15 +35,15 @@ fn setup_world(
     world: Query<&mut core::World>,
 ) {
     let world = world.single();
-    for (_handle, collider) in world.collider_set.iter() {
+    for (_handle, collider) in world.colliders.iter() {
         match collider.shape().as_typed_shape() {
             RapierCuboid(cuboid) => {
                 commands.spawn(MaterialMesh2dBundle {
                     mesh: meshes
                         .add(
                             shape::Quad::new(Vec2::new(
-                                cuboid.half_extents.x,
-                                cuboid.half_extents.y,
+                                cuboid.half_extents.x * 2.0,
+                                cuboid.half_extents.y * 2.0,
                             ))
                             .into(),
                         )
@@ -60,10 +62,11 @@ fn setup_world(
     }
 }
 
-fn setup_graphics(
+fn setup_robot(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    robot: Query<&mut core::Robot>,
 ) {
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
     mesh.insert_attribute(
@@ -92,6 +95,23 @@ fn setup_graphics(
         },
         Robot,
     ));
+
+    let robot = robot.single();
+    for sensor in robot.sensor.iter() {
+        commands.spawn((
+            MaterialMesh2dBundle {
+                mesh: meshes.add(shape::Circle::new(5.).into()).into(),
+                material: materials.add(ColorMaterial::from(MEDIUM_ORANGE)),
+                transform: Transform::from_translation(Vec3::new(
+                    sensor.orientation.cos() * sensor.length,
+                    sensor.orientation.sin() * sensor.length,
+                    1.,
+                )),
+                ..default()
+            },
+            Sensor,
+        ));
+    }
 }
 
 fn draw_robot(robots: Query<&mut core::Robot>, mut transform: Query<&mut Transform, With<Robot>>) {
@@ -100,6 +120,18 @@ fn draw_robot(robots: Query<&mut core::Robot>, mut transform: Query<&mut Transfo
     transform.translation.x = robot.position.x;
     transform.translation.y = robot.position.y;
     transform.rotation = Quat::from_rotation_z(robot.orientation);
+}
+
+fn draw_sensors(robot: Query<&mut core::Robot>, mut query: Query<&mut Transform, With<Sensor>>) {
+    let robot = robot.single();
+    for i in 0..robot.sensor.len() {
+        if let Some(sensor) = &mut query.iter_mut().nth(i) {
+            let length = robot.sensor[i].length;
+            let orientation = robot.sensor[i].orientation + robot.orientation;
+            sensor.translation.x = robot.position.x + length * orientation.cos();
+            sensor.translation.y = robot.position.y + length * orientation.sin();
+        }
+    }
 }
 
 pub fn draw_line(

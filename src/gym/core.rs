@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
 use bevy_rapier2d::rapier::dynamics::RigidBodySet;
 use bevy_rapier2d::rapier::geometry::ColliderBuilder;
@@ -7,17 +9,24 @@ use bevy_rapier2d::rapier::pipeline::QueryPipeline;
 use nalgebra::point;
 use nalgebra::vector;
 
+pub struct SensorRay {
+    pub orientation: f32,
+    pub length: f32,
+}
+
 #[derive(Component)]
 pub struct Robot {
     pub position: Vec2,
     pub orientation: f32,
     pub trajectory: Vec<Vec2>,
+    pub sensor: Vec<SensorRay>,
+    pub sensor_max_length: f32,
 }
 
 #[derive(Component)]
 pub struct World {
     pipeline: QueryPipeline,
-    pub collider_set: ColliderSet,
+    pub colliders: ColliderSet,
 }
 
 pub struct GymCorePlugin;
@@ -43,37 +52,66 @@ fn setup_world(mut commands: Commands) {
 
     commands.spawn(World {
         pipeline,
-        collider_set,
+        colliders: collider_set,
     });
 }
 
 fn setup_robot(mut commands: Commands) {
+    let sensor_max_length = 100.0;
     commands.spawn(Robot {
         position: Vec2::new(0.0, 0.0),
         orientation: 0.0,
         trajectory: Vec::new(),
+        sensor: vec![
+            SensorRay {
+                orientation: 0.0,
+                length: sensor_max_length,
+            },
+            SensorRay {
+                orientation: PI / 8.0,
+                length: sensor_max_length,
+            },
+            SensorRay {
+                orientation: -PI / 8.0,
+                length: sensor_max_length,
+            },
+        ],
+        sensor_max_length,
     });
 }
 
-fn update_physics(robots: Query<&mut Robot>, mut rapier_handlers: Query<&mut World>) {
-    let robot = robots.single();
-    let x = robot.position.x;
-    let y = robot.position.y;
-
-    let rapier_handler = rapier_handlers.iter_mut().next().unwrap();
-    let ray = Ray::new(point![x, y], vector![0.0, -1.0]);
+fn update_physics(mut robots: Query<&mut Robot>, rapier_handlers: Query<&mut World>) {
+    let mut robot = robots.single_mut();
+    let rapier_handler = rapier_handlers.single();
     let filter = QueryFilter::default();
     let bodies = RigidBodySet::new();
 
-    if let Some((_handle, toi)) = rapier_handler.pipeline.cast_ray(
-        &bodies,
-        &rapier_handler.collider_set,
-        &ray,
-        250.0,
-        false,
-        filter,
-    ) {
-        let _hit_point = ray.point_at(toi);
+    let position = robot.position;
+    let robot_orientation = robot.orientation;
+    let max_toi = robot.sensor_max_length;
+    let sensors = &mut robot.sensor;
+
+    for sensor in sensors.iter_mut() {
+        let ray = Ray::new(
+            point![position.x, position.y],
+            vector![
+                (sensor.orientation + robot_orientation).cos(),
+                (sensor.orientation + robot_orientation).sin()
+            ],
+        );
+
+        if let Some((_, toi)) = rapier_handler.pipeline.cast_ray(
+            &bodies,
+            &rapier_handler.colliders,
+            &ray,
+            max_toi,
+            false,
+            filter,
+        ) {
+            sensor.length = toi;
+        } else {
+            sensor.length = max_toi;
+        }
     }
 }
 
