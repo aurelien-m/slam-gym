@@ -57,26 +57,25 @@ fn setup_world(mut commands: Commands) {
 }
 
 fn setup_robot(mut commands: Commands) {
-    let sensor_max_length = 100.0;
+    let length = 200.0;
+    let ray_count = 10;
+    let fov = 45.0 * (PI / 180.0);
+
+    let mut sensor = Vec::new();
+    for i in 0..ray_count {
+        let orientation = (i as f32 / ray_count as f32) * (fov * 2.0) - fov;
+        sensor.push(SensorRay {
+            orientation,
+            length,
+        });
+    }
+
     commands.spawn(Robot {
         position: Vec2::new(0.0, 0.0),
         orientation: 0.0,
         trajectory: Vec::new(),
-        sensor: vec![
-            SensorRay {
-                orientation: 0.0,
-                length: sensor_max_length,
-            },
-            SensorRay {
-                orientation: PI / 8.0,
-                length: sensor_max_length,
-            },
-            SensorRay {
-                orientation: -PI / 8.0,
-                length: sensor_max_length,
-            },
-        ],
-        sensor_max_length,
+        sensor_max_length: length,
+        sensor,
     });
 }
 
