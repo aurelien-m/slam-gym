@@ -23,6 +23,9 @@ pub struct Robot {
     pub sensor_max_length: f32,
 }
 
+const TRANS_SPEED: f32 = 60.0;
+const ROT_SPEED: f32 = PI / 4.0;
+
 #[derive(Component)]
 pub struct World {
     pipeline: QueryPipeline,
@@ -116,31 +119,49 @@ fn update_physics(mut robots: Query<&mut Robot>, rapier_handlers: Query<&mut Wor
 
 fn update_robot(time: Res<Time>, mut robots: Query<&mut Robot>) {
     let mut robot = robots.single_mut();
+    let new_orientation;
+    let new_x;
+    let new_y;
 
     if let Some(destination) = robot.trajectory.first() {
         let delta_x = destination.x - robot.position.x;
         let delta_y = destination.y - robot.position.y;
-
-        let distance = (delta_x.powi(2) + delta_y.powi(2)).sqrt();
-        let speed = 50.0;
-
-        let delta = speed * time.delta_seconds();
         let angle = delta_y.atan2(delta_x);
+        let delta = ROT_SPEED * time.delta_seconds();
 
-        let new_position_x;
-        let new_position_y;
+        if (robot.orientation - angle).abs() * 2.0 > delta {
+            let new_orientation;
 
-        if distance > delta {
-            new_position_x = robot.position.x + delta * angle.cos();
-            new_position_y = robot.position.y + delta * angle.sin();
+            if (robot.orientation < angle && angle - robot.orientation <= PI)
+                || (robot.orientation > angle && robot.orientation - angle > PI)
+            {
+                new_orientation = robot.orientation + delta;
+            } else {
+                new_orientation = robot.orientation - delta;
+            }
+
+            robot.orientation = new_orientation;
+            return;
         } else {
-            new_position_x = destination.x;
-            new_position_y = destination.y;
-            robot.trajectory.remove(0);
+            new_orientation = angle;
         }
 
-        robot.position.x = new_position_x;
-        robot.position.y = new_position_y;
-        robot.orientation = angle;
+        let distance = (delta_x.powi(2) + delta_y.powi(2)).sqrt();
+        let delta = TRANS_SPEED * time.delta_seconds();
+
+        if distance > delta {
+            new_x = robot.position.x + delta * angle.cos();
+            new_y = robot.position.y + delta * angle.sin();
+        } else {
+            new_x = destination.x;
+            new_y = destination.y;
+            robot.trajectory.remove(0);
+        }
+    } else {
+        return;
     }
+
+    robot.position.x = new_x;
+    robot.position.y = new_y;
+    robot.orientation = new_orientation;
 }

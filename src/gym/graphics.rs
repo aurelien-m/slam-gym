@@ -14,6 +14,10 @@ const LIGHT_ORANGE: Color = Color::rgb(0.91, 0.77, 0.42);
 const MEDIUM_ORANGE: Color = Color::rgb(0.96, 0.64, 0.38);
 const DARK_ORANGE: Color = Color::rgb(0.91, 0.44, 0.32);
 
+const BOTTOM_LEVEL: f32 = 0.0;
+const MEDIUM_LEVEL: f32 = 1.0;
+const TOP_LEVEL: f32 = 2.0;
+
 #[derive(Component)]
 struct Robot;
 
@@ -52,7 +56,7 @@ fn setup_world(
                     transform: Transform::from_translation(Vec3::new(
                         collider.position().translation.x,
                         collider.position().translation.y,
-                        0.,
+                        BOTTOM_LEVEL,
                     )),
                     ..default()
                 });
@@ -89,7 +93,7 @@ fn setup_robot(
         MaterialMesh2dBundle {
             mesh: meshes.add(mesh).into(),
             material: materials.add(ColorMaterial::from(LIGHT_ORANGE)),
-            transform: Transform::from_translation(Vec3::new(0., 0., 1.))
+            transform: Transform::from_translation(Vec3::new(0., 0., TOP_LEVEL))
                 .with_scale(Vec3::splat(16.)),
             ..Default::default()
         },
@@ -105,7 +109,7 @@ fn setup_robot(
                 transform: Transform::from_translation(Vec3::new(
                     sensor.orientation.cos() * sensor.length,
                     sensor.orientation.sin() * sensor.length,
-                    1.,
+                    TOP_LEVEL,
                 )),
                 ..default()
             },
@@ -144,7 +148,10 @@ pub fn draw_line(
     let mut mesh = Mesh::new(PrimitiveTopology::LineStrip);
     mesh.insert_attribute(
         Mesh::ATTRIBUTE_POSITION,
-        vec![[point_a.x, point_a.y, 0.], [point_b.x, point_b.y, 0.]],
+        vec![
+            [point_a.x, point_a.y, MEDIUM_LEVEL],
+            [point_b.x, point_b.y, MEDIUM_LEVEL],
+        ],
     );
     commands.spawn(MaterialMesh2dBundle {
         mesh: meshes.add(mesh).into(),
@@ -163,7 +170,7 @@ pub fn draw_point(
     commands.spawn(MaterialMesh2dBundle {
         mesh: meshes.add(shape::Circle::new(5.).into()).into(),
         material: materials.add(ColorMaterial::from(LIGHT_BLUE)),
-        transform: Transform::from_translation(Vec3::new(point.x, point.y, 0.)),
+        transform: Transform::from_translation(Vec3::new(point.x, point.y, MEDIUM_LEVEL)),
         ..default()
     });
 }
