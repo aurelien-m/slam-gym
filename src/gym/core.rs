@@ -119,39 +119,53 @@ fn update_physics(mut robots: Query<&mut Robot>, rapier_handlers: Query<&mut Wor
 
 fn update_robot(time: Res<Time>, mut robots: Query<&mut Robot>) {
     let mut robot = robots.single_mut();
-    let new_orientation;
+    let target_angle;
     let new_x;
     let new_y;
 
     if let Some(destination) = robot.trajectory.first() {
         let delta_x = destination.x - robot.position.x;
         let delta_y = destination.y - robot.position.y;
-        let angle = delta_y.atan2(delta_x);
+        target_angle = delta_y.atan2(delta_x);
         let delta = ROT_SPEED * time.delta_seconds();
 
-        if (robot.orientation - angle).abs() * 2.0 > delta {
+        println!(
+            "target angle: {} | current angle: {} | abs diff: {} | delta: {}",
+            target_angle,
+            robot.orientation,
+            (robot.orientation - target_angle).abs(),
+            delta
+        );
+
+        if (robot.orientation - target_angle).abs() > delta {
             let new_orientation;
 
-            if (robot.orientation < angle && angle - robot.orientation <= PI)
-                || (robot.orientation > angle && robot.orientation - angle > PI)
+            if (robot.orientation < target_angle && target_angle - robot.orientation <= PI)
+                || (robot.orientation > target_angle && robot.orientation - target_angle > PI)
             {
                 new_orientation = robot.orientation + delta;
             } else {
                 new_orientation = robot.orientation - delta;
             }
 
+            let new_orientation = if new_orientation > PI {
+                new_orientation - 2.0 * PI
+            } else if new_orientation < -PI {
+                new_orientation + 2.0 * PI
+            } else {
+                new_orientation
+            };
+
             robot.orientation = new_orientation;
             return;
-        } else {
-            new_orientation = angle;
         }
 
         let distance = (delta_x.powi(2) + delta_y.powi(2)).sqrt();
         let delta = TRANS_SPEED * time.delta_seconds();
 
         if distance > delta {
-            new_x = robot.position.x + delta * angle.cos();
-            new_y = robot.position.y + delta * angle.sin();
+            new_x = robot.position.x + delta * target_angle.cos();
+            new_y = robot.position.y + delta * target_angle.sin();
         } else {
             new_x = destination.x;
             new_y = destination.y;
@@ -163,5 +177,5 @@ fn update_robot(time: Res<Time>, mut robots: Query<&mut Robot>) {
 
     robot.position.x = new_x;
     robot.position.y = new_y;
-    robot.orientation = new_orientation;
+    robot.orientation = target_angle;
 }
