@@ -1,18 +1,55 @@
 use super::core;
 use super::graphics;
 use bevy::input::common_conditions::*;
-use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
+use bevy::{
+    diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
+    prelude::*,
+};
 
 pub struct UiPlugin;
 
+#[derive(Component)]
+struct FpsText;
+
+#[derive(Component)]
+struct ShowFps(bool);
+
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, update_camera).add_systems(
-            Update,
-            add_trajectory_point.run_if(input_just_pressed(MouseButton::Right)),
-        );
+        app.add_systems(Startup, setup)
+            .add_systems(
+                Update,
+                (
+                    update_camera,
+                    text_update_system,
+                    add_trajectory_point.run_if(input_just_pressed(MouseButton::Right)),
+                    change_show_fps.run_if(input_just_pressed(KeyCode::F)),
+                ),
+            )
+            .add_plugins(FrameTimeDiagnosticsPlugin);
     }
+}
+
+fn setup(mut commands: Commands) {
+    commands.spawn((
+        TextBundle::from_section(
+            "",
+            TextStyle {
+                font_size: 20.0,
+                color: Color::WHITE,
+                ..default()
+            },
+        )
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            bottom: Val::Px(5.0),
+            right: Val::Px(10.0),
+            ..default()
+        }),
+        FpsText,
+    ));
+    commands.spawn(ShowFps(false));
 }
 
 fn update_camera(
@@ -67,5 +104,32 @@ fn add_trajectory_point(
                 robot.trajectory[robot.trajectory.len() - 1],
             )
         }
+    }
+}
+
+fn text_update_system(
+    diagnostics: Res<DiagnosticsStore>,
+    mut query: Query<&mut Text, With<FpsText>>,
+    show_fps: Query<&ShowFps>,
+) {
+    if !show_fps.single().0 {
+        return;
+    }
+
+    let mut text = query.single_mut();
+    if let Some(fps) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS) {
+        if let Some(value) = fps.smoothed() {
+            text.sections[0].value = format!("FPS: {value:.2}");
+        }
+    }
+}
+
+fn change_show_fps(mut show_fps: Query<&mut ShowFps>, mut query: Query<&mut Text, With<FpsText>>) {
+    let mut show_fps = show_fps.single_mut();
+    show_fps.0 = !show_fps.0;
+
+    if !show_fps.0 {
+        let mut text = query.single_mut();
+        text.sections[0].value = String::new();
     }
 }

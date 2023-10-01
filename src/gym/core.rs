@@ -129,14 +129,6 @@ fn update_robot(time: Res<Time>, mut robots: Query<&mut Robot>) {
         target_angle = delta_y.atan2(delta_x);
         let delta = ROT_SPEED * time.delta_seconds();
 
-        println!(
-            "target angle: {} | current angle: {} | abs diff: {} | delta: {}",
-            target_angle,
-            robot.orientation,
-            (robot.orientation - target_angle).abs(),
-            delta
-        );
-
         if (robot.orientation - target_angle).abs() > delta {
             let new_orientation;
 
