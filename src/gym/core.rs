@@ -18,13 +18,16 @@ pub struct SensorRay {
 pub struct Robot {
     pub position: Vec2,
     pub orientation: f32,
+    pub velocity: f32,
     pub trajectory: Vec<Vec2>,
     pub sensor: Vec<SensorRay>,
     pub sensor_max_length: f32,
 }
 
-const TRANS_SPEED: f32 = 60.0;
-const ROT_SPEED: f32 = PI / 4.0;
+const ACCELERATION: f32 = 50.0;
+const MAX_VELOCITY: f32 = 100.0;
+// const ANGULAR_ACCELERATION: f32 = PI / 2.0;
+const MAX_ANGULAR_VELOCITY: f32 = PI / 4.0;
 
 #[derive(Component)]
 pub struct World {
@@ -76,6 +79,7 @@ fn setup_robot(mut commands: Commands) {
     commands.spawn(Robot {
         position: Vec2::new(0.0, 0.0),
         orientation: 0.0,
+        velocity: 0.0,
         trajectory: Vec::new(),
         sensor_max_length: length,
         sensor,
@@ -119,6 +123,7 @@ fn update_physics(mut robots: Query<&mut Robot>, rapier_handlers: Query<&mut Wor
 
 fn update_robot(time: Res<Time>, mut robots: Query<&mut Robot>) {
     let mut robot = robots.single_mut();
+    let mut velocity;
     let target_angle;
     let new_x;
     let new_y;
@@ -127,7 +132,7 @@ fn update_robot(time: Res<Time>, mut robots: Query<&mut Robot>) {
         let delta_x = destination.x - robot.position.x;
         let delta_y = destination.y - robot.position.y;
         target_angle = delta_y.atan2(delta_x);
-        let delta = ROT_SPEED * time.delta_seconds();
+        let delta = MAX_ANGULAR_VELOCITY * time.delta_seconds();
 
         if (robot.orientation - target_angle).abs() > delta {
             let new_orientation;
@@ -152,22 +157,34 @@ fn update_robot(time: Res<Time>, mut robots: Query<&mut Robot>) {
             return;
         }
 
+        let stopping_distance = (robot.velocity.powi(2) / (2.0 * ACCELERATION)).abs();
         let distance = (delta_x.powi(2) + delta_y.powi(2)).sqrt();
-        let delta = TRANS_SPEED * time.delta_seconds();
 
-        if distance > delta {
-            new_x = robot.position.x + delta * target_angle.cos();
-            new_y = robot.position.y + delta * target_angle.sin();
+        velocity = if stopping_distance > distance {
+            robot.velocity - ACCELERATION * time.delta_seconds()
+        } else if robot.velocity < MAX_VELOCITY {
+            robot.velocity + ACCELERATION * time.delta_seconds()
+        } else {
+            MAX_VELOCITY
+        };
+
+        let travelled_distance = velocity * time.delta_seconds();
+
+        if distance > travelled_distance {
+            new_x = robot.position.x + travelled_distance * target_angle.cos();
+            new_y = robot.position.y + travelled_distance * target_angle.sin();
         } else {
             new_x = destination.x;
             new_y = destination.y;
+            velocity = 0.0;
             robot.trajectory.remove(0);
         }
     } else {
         return;
     }
 
+    robot.orientation = target_angle;
+    robot.velocity = velocity;
     robot.position.x = new_x;
     robot.position.y = new_y;
-    robot.orientation = target_angle;
 }
