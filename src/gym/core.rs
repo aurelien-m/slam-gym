@@ -29,8 +29,11 @@ pub struct Trajectory(pub Vec<Vec2>);
 
 const ACCELERATION: f32 = 150.0;
 const MAX_VELOCITY: f32 = 200.0;
-const ANGULAR_ACCELERATION: f32 = PI / 4.0;
+const ANGULAR_ACCELERATION: f32 = PI / 3.0;
 const MAX_ANGULAR_VELOCITY: f32 = PI / 2.0;
+
+const ENABLE_SENSOR: bool = false;
+const GENERATE_WORLD: bool = false;
 
 #[derive(Component)]
 pub struct World {
@@ -48,20 +51,23 @@ impl Plugin for GymCorePlugin {
 }
 
 fn setup_world(mut commands: Commands) {
-    let collider = ColliderBuilder::cuboid(500.0, 50.0)
-        .translation(vector![0.0, -200.0])
-        .build();
-
-    let mut collider_set = ColliderSet::new();
-    collider_set.insert(collider);
-
-    let rigid_body_set = RigidBodySet::new();
+    let mut colliders = ColliderSet::new();
     let mut pipeline = QueryPipeline::new();
-    pipeline.update(&rigid_body_set, &collider_set);
+
+    if GENERATE_WORLD {
+        let collider = ColliderBuilder::cuboid(500.0, 50.0)
+            .translation(vector![0.0, -200.0])
+            .build();
+
+        colliders.insert(collider);
+
+        let rigid_body_set = RigidBodySet::new();
+        pipeline.update(&rigid_body_set, &colliders);
+    }
 
     commands.spawn(World {
         pipeline,
-        colliders: collider_set,
+        colliders,
     });
 }
 
@@ -71,12 +77,14 @@ fn setup_robot(mut commands: Commands) {
     let fov = 45.0 * (PI / 180.0);
 
     let mut sensor = Vec::new();
-    for i in 0..ray_count {
-        let orientation = (i as f32 / ray_count as f32) * (fov * 2.0) - fov;
-        sensor.push(SensorRay {
-            orientation,
-            length,
-        });
+    if ENABLE_SENSOR {
+        for i in 0..ray_count {
+            let orientation = (i as f32 / ray_count as f32) * (fov * 2.0) - fov;
+            sensor.push(SensorRay {
+                orientation,
+                length,
+            });
+        }
     }
 
     commands.spawn(Robot {
