@@ -15,6 +15,9 @@ struct FpsText;
 #[derive(Component)]
 struct ShowFps(bool);
 
+#[derive(Component)]
+struct RobotInfoText;
+
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup)
@@ -50,6 +53,23 @@ fn setup(mut commands: Commands) {
         FpsText,
     ));
     commands.spawn(ShowFps(false));
+    commands.spawn((
+        TextBundle::from_section(
+            "",
+            TextStyle {
+                font_size: 20.0,
+                color: Color::WHITE,
+                ..default()
+            },
+        )
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(5.0),
+            left: Val::Px(10.0),
+            ..default()
+        }),
+        RobotInfoText,
+    ));
 }
 
 fn update_camera(
@@ -101,14 +121,23 @@ fn add_trajectory_point(
 
 fn text_update_system(
     diagnostics: Res<DiagnosticsStore>,
-    mut query: Query<&mut Text, With<FpsText>>,
+    mut fps_text: Query<&mut Text, (Without<RobotInfoText>, With<FpsText>)>,
+    mut info_text: Query<&mut Text, (Without<FpsText>, With<RobotInfoText>)>,
     show_fps: Query<&ShowFps>,
+    robot: Query<&core::Robot>,
 ) {
+    let mut text = info_text.single_mut();
+    let robot = robot.single();
+    text.sections[0].value = format!(
+        "Position: ({:.1}, {:.1})\nVelocity: {:.1}\nAngular Velocity: {:.1}",
+        robot.position.x, robot.position.y, robot.velocity, robot.angular_velocity
+    );
+
     if !show_fps.single().0 {
         return;
     }
 
-    let mut text = query.single_mut();
+    let mut text = fps_text.single_mut();
     if let Some(fps) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS) {
         if let Some(value) = fps.smoothed() {
             text.sections[0].value = format!("FPS: {value:.2}");

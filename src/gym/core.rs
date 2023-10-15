@@ -27,10 +27,10 @@ pub struct Robot {
 #[derive(Component)]
 pub struct Trajectory(pub Vec<Vec2>);
 
-const ACCELERATION: f32 = 50.0;
-const MAX_VELOCITY: f32 = 100.0;
-const ANGULAR_ACCELERATION: f32 = PI / 2.0;
-const MAX_ANGULAR_VELOCITY: f32 = PI / 4.0;
+const ACCELERATION: f32 = 150.0;
+const MAX_VELOCITY: f32 = 200.0;
+const ANGULAR_ACCELERATION: f32 = PI / 4.0;
+const MAX_ANGULAR_VELOCITY: f32 = PI / 2.0;
 
 #[derive(Component)]
 pub struct World {
@@ -165,12 +165,12 @@ fn update_orientation(robot: &mut Robot, destination: &Vec2, dt: f32) -> bool {
         };
 
         robot.orientation = new_orientation;
-        return false;
-    } else {
-        robot.orientation = target_angle;
+        return false; // Orientation not reached
     }
 
-    true
+    robot.orientation = target_angle;
+    robot.angular_velocity = 0.0;
+    true // Orientation reached
 }
 
 fn update_position(robot: &mut Robot, destination: &Vec2, dt: f32) -> bool {
@@ -217,7 +217,7 @@ fn update_robot(
 
     if let Some(destination) = trajectory.0.first() {
         if !update_orientation(&mut robot, destination, time.delta_seconds()) {
-            return;
+            return; // Orientation not reached
         }
 
         if update_position(&mut robot, destination, time.delta_seconds()) {
