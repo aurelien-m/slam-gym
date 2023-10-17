@@ -35,10 +35,17 @@ const MAX_ANGULAR_VELOCITY: f32 = PI / 2.0;
 const ENABLE_SENSOR: bool = false;
 const GENERATE_WORLD: bool = false;
 
+pub struct Anchor {
+    pub id: usize,
+    pub x: f32,
+    pub y: f32,
+}
+
 #[derive(Component)]
 pub struct World {
     pipeline: QueryPipeline,
     pub colliders: ColliderSet,
+    pub anchors: Vec<Anchor>,
 }
 
 pub struct GymCorePlugin;
@@ -68,6 +75,7 @@ fn setup_world(mut commands: Commands) {
     commands.spawn(World {
         pipeline,
         colliders,
+        anchors: Vec::new(),
     });
 }
 

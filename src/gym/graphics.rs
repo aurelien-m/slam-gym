@@ -174,3 +174,20 @@ pub fn draw_point(
         ..default()
     });
 }
+
+pub fn draw_square(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    point: Vec2,
+    size: f32,
+) {
+    commands.spawn(MaterialMesh2dBundle {
+        mesh: meshes
+            .add(shape::Quad::new(Vec2::new(size, size)).into())
+            .into(),
+        material: materials.add(ColorMaterial::from(DARK_ORANGE)),
+        transform: Transform::from_translation(Vec3::new(point.x, point.y, MEDIUM_LEVEL)),
+        ..default()
+    });
+}

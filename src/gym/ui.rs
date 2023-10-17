@@ -24,10 +24,11 @@ impl Plugin for UiPlugin {
             .add_systems(
                 Update,
                 (
-                    update_camera.run_if(input_pressed(MouseButton::Right)),
+                    update_camera.run_if(input_pressed(MouseButton::Left)),
                     text_update_system,
                     add_trajectory_point.run_if(input_just_pressed(MouseButton::Right)),
                     change_show_fps.run_if(input_just_pressed(KeyCode::F)),
+                    add_anchor.run_if(input_just_pressed(KeyCode::A)),
                 ),
             )
             .add_plugins(FrameTimeDiagnosticsPlugin);
@@ -129,7 +130,7 @@ fn text_update_system(
     let mut text = info_text.single_mut();
     let robot = robot.single();
     text.sections[0].value = format!(
-        "Position: ({:.1}, {:.1})\nVelocity: {:.1}\nAngular Velocity: {:.1}",
+        "Position: ({:.1}, {:.1})\nVelocity: {:.0}\nAngular Velocity: {:.1}",
         robot.position.x, robot.position.y, robot.velocity, robot.angular_velocity
     );
 
@@ -152,5 +153,37 @@ fn change_show_fps(mut show_fps: Query<&mut ShowFps>, mut query: Query<&mut Text
     if !show_fps.0 {
         let mut text = query.single_mut();
         text.sections[0].value = String::new();
+    }
+}
+
+fn add_anchor(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    cameras: Query<(&Camera, &GlobalTransform)>,
+    mut world: Query<&mut core::World>,
+) {
+    let (camera, camera_transform) = cameras.single();
+    if let Some(world_position) = windows
+        .single()
+        .cursor_position()
+        .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+        .map(|ray| ray.origin.truncate())
+    {
+        let mut world = world.single_mut();
+        let id = world.anchors.len();
+        world.anchors.push(core::Anchor {
+            id,
+            x: world_position.x,
+            y: world_position.y,
+        });
+        graphics::draw_square(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            world_position,
+            15.0,
+        );
     }
 }
